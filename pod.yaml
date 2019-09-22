@@ -1,0 +1,6 @@
+ds:
+  pod: kubernetes-dashboard-
+  ns: kube-system
+  applyon: svc
+  svc: kubernetes-dashboard
+  portmap: 30000:443
