@@ -1,5 +1,21 @@
-PRV_DIR=$pwd
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PRV_DIR=$(pwd)
+rlink() {
+  TARGET_FILE=$1
+  cd `dirname $TARGET_FILE`
+  TARGET_FILE=`basename $TARGET_FILE`
+  while [ -L "$TARGET_FILE" ]
+  do
+    TARGET_FILE=`readlink $TARGET_FILE`
+    cd `dirname $TARGET_FILE`
+    TARGET_FILE=`basename $TARGET_FILE`
+  done
+  PHYS_DIR=`pwd -P`
+  RESULT=$PHYS_DIR/$TARGET_FILE
+  echo $RESULT
+}
+
+SFILE=`rlink $0`
+DIR="$(cd `dirname $SFILE` && pwd)"
 
 cd $DIR
 mkdir -p vendor
@@ -9,26 +25,13 @@ if ! command -v xclip > /dev/null 2>&1; then
     echo "WARNING -----> xclip / pbcopy is not installed. Please install to copy tokens automatically."
     if command -v apt-get > /dev/null 2>&1; then
       echo sudo apt-get install xclip
-      exit 1
     fi
   fi
 fi
 
 if ! command -v yq > /dev/null 2>&1; then
-  if command -v snap > /dev/null 2>&1; then
-    echo sudo snap install yq
-    exit 1
-  elif command -v brew > /dev/null 2>&1; then
-    brew install yq
-  elif command -v apt-get > /dev/null 2>&1; then
-    echo sudo add-apt-repository ppa:rmescandon/yq
-    echo sudo apt-get update
-    echo sudo apt-get install yq -y
-    exit 1
-  else
-    echo "Please install yq first. https://github.com/mikefarah/yq"
-    exit 1
-  fi
+  curl -Lo vendor/yq https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64
+  chmod +x vendor/yq
 fi
 
 KCTL_CONFIG_DIR=${KCTL_CONFIG_DIR:-$DIR/configs}
@@ -44,8 +47,7 @@ if [ ! -f /usr/local/bin/kctl ]; then
   if [ -d $HOME/bin ]; then
     ln -s $DIR/kctl.sh $HOME/bin/kctl
     if ! command -v kctl > /dev/null 2>&1; then
-      echo "Make sure to have $HOME/bin into your \$PATH. And retry."
-      exit 1
+      echo "Make sure to have $HOME/bin into your \$PATH."
     fi
   else
     echo sudo ln -s $DIR/kctl.sh /usr/local/bin/kctl
@@ -56,7 +58,7 @@ fi
 mkdir -p ${KCTL_CONFIG_DIR}
 if [ ! -f $DIR/cluster ]; then
   filep=${1:-dev}
-  bn=`basename "$filep"`
+  bn=${2:-`basename "$filep"`}
   if [ "$1" != "" ]; then
     cp $1 ${KCTL_CONFIG_DIR}/${bn}
   fi
