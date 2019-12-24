@@ -187,7 +187,7 @@ getNSandPod() {
         done
       else
         if [ "$VERBOSE" != "0" ]; then
-          read -p "Pod \`$ACT_ENTITY\` found in namespace \`$EKEY\`. Should i remember for future? (yY/nN): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || continue
+          read -p "Pod \`$ACT_ENTITY\` found in namespace \`$EKEY\`. Should i remember for future? (yY/nN): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || true
         fi
         NAME_SPACE=$EKEY
         $YQ_CMD w -i $KCTL_POD_FILE $EKEY.ns $EKEY
