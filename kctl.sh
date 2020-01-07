@@ -187,7 +187,7 @@ getNSandPod() {
         done
       else
         if [ "$VERBOSE" != "0" ]; then
-          read -p "Pod \`$ACT_ENTITY\` found in namespace \`$EKEY\`. Should i remember for future? (yY/nN): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || continue
+          read -p "Pod \`$ACT_ENTITY\` found in namespace \`$EKEY\`. Should i remember for future? (yY/nN): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || true
         fi
         NAME_SPACE=$EKEY
         $YQ_CMD w -i $KCTL_POD_FILE $EKEY.ns $EKEY
@@ -255,6 +255,12 @@ dopf() {
     "$BROWSER" "http$hps://localhost:$dport"
 }
 
+set_container() {
+  CONTAINER_NAME=$($YQ_CMD r $KCTL_POD_FILE $EKEY.cont)
+  [ $CONTAINER_NAME == "null" ] && CONTAINER_NAME=""
+  [ ! -z $CONTAINER_NAME ] && CONTAINER_NAME="-c $CONTAINER_NAME"
+}
+
 case "${1}"
 in
     ("del")
@@ -279,8 +285,9 @@ in
     ("ex")
       if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
       getNSandPod "$2"
+      set_container
       if [ "$VERBOSE" == "1" ]; then
-        echo 'RUNNING : kubectl -n '${NAME_SPACE}' exec -it '$ACT_ENTITY' -- '
+        echo 'RUNNING : kubectl -n '${NAME_SPACE}' exec -it '$ACT_ENTITY' '${CONTAINER_NAME}' -- '
       fi
       CMD=bash
       if [ "$3" == "" ];then
@@ -299,23 +306,28 @@ in
         fi
       fi
       if [ "$4" == "" ];then
-        kubectl -n ${NAME_SPACE} exec -it $ACT_ENTITY -- "$CMD"
+        kubectl -n ${NAME_SPACE} exec -it $ACT_ENTITY ${CONTAINER_NAME} -- $CMD
         if [ "$?" == "126" ]; then
-          $YQ_CMD w -i $KCTL_POD_FILE $EKEY.exas sh
-          kubectl -n ${NAME_SPACE} exec -it $ACT_ENTITY -- sh
+          if [ "$VERBOSE" != "0" ]; then
+            read -p "Command not found in pod. Should i remember reset it to \`sh\`? (yY/nN): " confirm && \
+              [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] && \
+              $YQ_CMD w -i $KCTL_POD_FILE $EKEY.exas sh && \
+              $YQ_CMD w -i $KCTL_POD_FILE $EKEY._prev_exas "$CMD"
+          fi
+          kubectl -n ${NAME_SPACE} exec -it $ACT_ENTITY ${CONTAINER_NAME} -- sh
         fi
       else
-        kubectl -n ${NAME_SPACE} exec -it $ACT_ENTITY -- $3 "${@:4}"
+        kubectl -n ${NAME_SPACE} exec -it $ACT_ENTITY ${CONTAINER_NAME} -- $3 "${@:4}"
       fi
       ;;
     ("ssh")
       if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
       getNSandPod "$2"
-      CONTAINER_NAME=$($YQ_CMD r $KCTL_POD_FILE $EKEY.cont)
+      set_container
       if [ "$VERBOSE" == "1" ]; then
-        echo RUNNING : kubectl-ssh "${@:4}" -n ${NAME_SPACE} -u $3 -c ${CONTAINER_NAME} $ACT_ENTITY
+        echo RUNNING : kubectl-ssh "${@:4}" -n ${NAME_SPACE} -u $3 ${CONTAINER_NAME} $ACT_ENTITY
       fi
-      $SDIR/vendor/kubectl-ssh "${@:4}" -n ${NAME_SPACE} -u $3 -c ${CONTAINER_NAME} $ACT_ENTITY
+      $SDIR/vendor/kubectl-ssh "${@:4}" -n ${NAME_SPACE} -u $3 ${CONTAINER_NAME} $ACT_ENTITY
       ;;
     ("log")
       if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
