@@ -1,0 +1,16 @@
+_kctl()
+{
+
+  local cur
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+  if [ "$prev" == "ln" ];  then
+     _script_commands=$(find /home/inct-ramesh/w/ct/kctl/configs -type f -printf '%f\n' | sort | xargs)
+     COMPREPLY=( $(compgen -W "${_script_commands}" -- ${cur}) )
+  else
+     COMPREPLY=( $(compgen -o default -- "${cur}") )
+  fi
+  return 0
+}
+complete -o nospace -F _kctl kctl
