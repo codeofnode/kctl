@@ -16,6 +16,7 @@ rlink() {
 
 SFILE=`rlink $0`
 DIR="$(cd `dirname $SFILE` && pwd)"
+source $DIR/utils.sh
 
 cd $DIR
 mkdir -p vendor
@@ -41,7 +42,7 @@ KCTL_POD_FILE=${KCTL_POD_FILE:-$1}
 [ -z $KCTL_POD_FILE ] && KCTL_POD_FILE=$DIR/pod.yaml
 [ ! -f $KCTL_POD_FILE ] && touch $KCTL_POD_FILE
 KCTL_KUBECONFIGS_DIR=${KCTL_KUBECONFIGS_DIR:-`$YQ_CMD r $KCTL_POD_FILE $KCTL_KEY.kubeconfigs_dir`}
-([ "$KCTL_KUBECONFIGS_DIR" = "" ] || [ "$KCTL_KUBECONFIGS_DIR" = "null" ]) && KCTL_KUBECONFIGS_DIR=$DIR/configs
+if_null $KCTL_KUBECONFIGS_DIR && KCTL_KUBECONFIGS_DIR=$DIR/configs
 
 if [ ! -f vendor/kubectl-ssh ]; then
   curl -o vendor/kubectl-ssh https://raw.githubusercontent.com/jordanwilson230/kubectl-plugins/master/kubectl-ssh

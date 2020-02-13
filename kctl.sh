@@ -104,6 +104,7 @@ fi
 PRV_DIR=$(pwd)
 SFILE=`rlink ${BASH_SOURCE[0]}`
 SDIR="$( cd "$( dirname "$SFILE" )" && pwd )"
+source $SDIR/utils.sh
 cd $PRV_DIR
 KCTL_POD_FILE=${KCTL_POD_FILE:-$SDIR/pod.yaml}
 
@@ -127,18 +128,18 @@ fi
 
 KCTL_KEY=_kctl
 KCTL_KUBECONFIGS_DIR=${KCTL_KUBECONFIGS_DIR:-`$YQ_CMD r $KCTL_POD_FILE $KCTL_KEY.kubeconfigs_dir`}
-([ "$KCTL_KUBECONFIGS_DIR" = "" ] || [ "$KCTL_KUBECONFIGS_DIR" = "null" ]) && KCTL_KUBECONFIGS_DIR=$DIR/configs
+if_null $KCTL_KUBECONFIGS_DIR && KCTL_KUBECONFIGS_DIR=$DIR/configs
 KCTL_DEFAULT_NS=${KCTL_DEFAULT_NS:-`$YQ_CMD r $KCTL_POD_FILE $KCTL_KEY.default_ns`}
-([ "$KCTL_DEFAULT_NS" = "" ] || [ "$KCTL_DEFAULT_NS" = "null" ]) && KCTL_DEFAULT_NS=default
+if_null $KCTL_DEFAULT_NS && KCTL_DEFAULT_NS=default
 KCTL_DEFAULT_ING_NS=${KCTL_DEFAULT_ING_NS:-`$YQ_CMD r $KCTL_POD_FILE $KCTL_KEY.default_ing_ns`}
-([ "$KCTL_DEFAULT_ING_NS" = "" ] || [ "$KCTL_DEFAULT_ING_NS" = "null" ]) && KCTL_DEFAULT_ING_NS=default
+if_null $KCTL_DEFAULT_ING_NS && KCTL_DEFAULT_ING_NS=default
 
 getNSandPod() {
   EKEY=$(echo "$1" | cut -d'/' -f1)
   APPLY_ON=$(echo "$1" | cut -d'/' -f2)
   NAME_SPACE=$($YQ_CMD r $KCTL_POD_FILE $EKEY.ns)
   POD_NAME=$($YQ_CMD r $KCTL_POD_FILE $EKEY.pod)
-  if [ "${NAME_SPACE}" = "" ] || [ "${NAME_SPACE}" = "null" ]; then
+  if if_null ${NAME_SPACE}; then
     NAME_SPACE=default
     if [ "$VERBOSE" != "0" ]; then
       echo "No info found for \`$EKEY.ns\`. To set, please run : \`$TOOL_NAME pd $EKEY.ns <namespace-name>\`"
@@ -149,14 +150,14 @@ getNSandPod() {
   in
     ("ing")
       NAME_SPACE=$($YQ_CMD r $KCTL_POD_FILE $EKEY.ingns)
-      [ "$NAME_SPACE" = "null" ] && NAME_SPACE=default
+      if_null ${NAME_SPACE} && NAME_SPACE=default
     ;;
   esac
   if [ "$APPLY_ON" = "$EKEY" ]; then
     APPLY_ON=$($YQ_CMD r $KCTL_POD_FILE $EKEY.applyon)
-    [ "$APPLY_ON" = "null" ] && APPLY_ON=pod
+    if_null $APPLY_ON && APPLY_ON=pod
   fi
-  if [ "${POD_NAME}" = "" ] || [ "${POD_NAME}" = "null" ]; then
+  if if_null $POD_NAME; then
     if [ "$VERBOSE" != "0" ]; then
       echo "No info found for \`$EKEY.pod\`. To set, please run : \`$TOOL_NAME pd $EKEY.pod <podname_prefix>\`"
       echo "For now, using default \`$EKEY.pod $EKEY-\`"
@@ -205,7 +206,7 @@ getNSandPod() {
     fi
   else
     ACT_ENTITY=$($YQ_CMD r $KCTL_POD_FILE $EKEY.$APPLY_ON)
-    [ "$ACT_ENTITY" = "null" ] && ACT_ENTITY=$EKEY
+    if_null $ACT_ENTITY && ACT_ENTITY=$EKEY
   fi
 }
 
@@ -262,7 +263,7 @@ dopf() {
 
 set_container() {
   CONTAINER_NAME=$($YQ_CMD r $KCTL_POD_FILE $EKEY.cont)
-  [ $CONTAINER_NAME = "null" ] && CONTAINER_NAME=""
+  if_null $CONTAINER_NAME && CONTAINER_NAME=""
   [ ! -z $CONTAINER_NAME ] && CONTAINER_NAME="-c $CONTAINER_NAME"
 }
 
@@ -297,7 +298,7 @@ in
       CMD=bash
       if [ "$3" = "" ];then
         CMD=$($YQ_CMD r $KCTL_POD_FILE $EKEY.exas)
-        if [ "$CMD" = "null" ];then
+        if if_null $CMD;then
           if [ "$4" = "" ];then
             CMD=bash
           else
@@ -373,7 +374,7 @@ in
     ("ds")
       if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
       KCTL_ds_token=$($YQ_CMD r $KUBECONFIG ds.token)
-      if [ "$KCTL_ds_token" = "null" ]; then
+      if if_null $KCTL_ds_token; then
         KCTL_ds_token=$(kubectl describe secret $(kubectl get secrets | grep kubernetes-dashboard- | head -1 | awk '{ print $1 }') | tail -1 | awk '{print $2}')
         if [ "${#KCTL_ds_token}" -gt 5 ]; then
           $YQ_CMD w -i $KUBECONFIG ds.token "${KCTL_ds_token}"
@@ -390,7 +391,7 @@ in
         echo "Token copied to cliboard."
       else
         url=$($YQ_CMD r $KUBECONFIG ds.url)
-        if [ "$url" = "null" ]; then
+        if if_null $url; then
           dopf pf ds
           wait
         else
