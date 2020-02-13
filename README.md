@@ -4,7 +4,7 @@ Easy kubectl for multiple clusters and namespaces.
 
 ## installation
 ```
-bash init.sh [<default_config_path>] [<nick_name_eg_qa>]
+bash init.sh [<kct_pod_yaml_path>] [<default_config_path>] [<nick_name_eg_qa>]
 ```
 
 ## Add a new cluster

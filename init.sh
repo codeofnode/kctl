@@ -29,12 +29,19 @@ if ! command -v xclip > /dev/null 2>&1; then
   fi
 fi
 
-if ! command -v yq > /dev/null 2>&1; then
+YQ_CMD='yq'
+if ! command -v $YQ_CMD > /dev/null 2>&1; then
   curl -Lo vendor/yq https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64
   chmod +x vendor/yq
+  YQ_CMD=vendor/yq
 fi
 
-KCTL_CONFIG_DIR=${KCTL_CONFIG_DIR:-$DIR/configs}
+KCTL_KEY=_kctl
+KCTL_POD_FILE=${KCTL_POD_FILE:-$1}
+[ -z $KCTL_POD_FILE ] && KCTL_POD_FILE=$DIR/pod.yaml
+[ ! -f $KCTL_POD_FILE ] && touch $KCTL_POD_FILE
+KCTL_KUBECONFIGS_DIR=${KCTL_KUBECONFIGS_DIR:-`$YQ_CMD r $KCTL_POD_FILE $KCTL_KEY.kubeconfigs_dir`}
+([ "$KCTL_KUBECONFIGS_DIR" = "" ] || [ "$KCTL_KUBECONFIGS_DIR" = "null" ]) && KCTL_KUBECONFIGS_DIR=$DIR/configs
 
 if [ ! -f vendor/kubectl-ssh ]; then
   curl -o vendor/kubectl-ssh https://raw.githubusercontent.com/jordanwilson230/kubectl-plugins/master/kubectl-ssh
@@ -54,13 +61,13 @@ if [ ! -f /usr/local/bin/kctl ]; then
   fi
 fi
 
-mkdir -p ${KCTL_CONFIG_DIR}
+mkdir -p ${KCTL_KUBECONFIGS_DIR}
 if [ ! -f $DIR/cluster ]; then
-  filep=${1:-dev}
-  bn=${2:-`basename "$filep"`}
-  if [ "$1" != "" ]; then
-    cp $1 ${KCTL_CONFIG_DIR}/${bn}
+  filep=${2:-dev}
+  bn=${3:-`basename "$filep"`}
+  if [ "$2" != "" ]; then
+    cp $2 ${KCTL_KUBECONFIGS_DIR}/${bn}
   fi
-  echo "${KCTL_CONFIG_DIR}/${bn}" > $DIR/cluster
+  echo "${KCTL_KUBECONFIGS_DIR}/${bn}" > $DIR/cluster
 fi
 cd $PRV_DIR
