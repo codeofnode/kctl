@@ -353,11 +353,12 @@ in
     ("cp"|"upcp")
       if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
       getNSandPod "$2"
-      from=${NAME_SPACE}/$ACT_ENTITY:$3
+      set_container
+      from="${CONTAINER_NAME} ${NAME_SPACE}/$ACT_ENTITY:$3"
       to=$4
       if [ "$1" == "upcp" ]; then
         from=$3
-        to=${NAME_SPACE}/$ACT_ENTITY:$4
+        to="${CONTAINER_NAME} ${NAME_SPACE}/$ACT_ENTITY:$4"
       fi
       if [ "$VERBOSE" == "1" ]; then
         echo RUNNING : kubectl cp "${@:5}" $from $to

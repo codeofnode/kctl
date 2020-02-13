@@ -51,7 +51,6 @@ if [ ! -f /usr/local/bin/kctl ]; then
     fi
   else
     echo sudo ln -s $DIR/kctl.sh /usr/local/bin/kctl
-    exit 1
   fi
 fi
 
