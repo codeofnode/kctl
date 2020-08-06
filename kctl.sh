@@ -96,7 +96,7 @@ if ! command -v $BROWSER > /dev/null 2>&1; then
   BROWSER=open
   if command -v xdg-open > /dev/null 2>&1; then
     BROWSER=xdg-open
-  elif [ -f /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome ]; then
+  elif [ -d /Applications ]; then
     BROWSER=open -a "Google Chrome"
   fi
 fi
@@ -128,7 +128,7 @@ fi
 
 KCTL_KEY=_kctl
 KCTL_KUBECONFIGS_DIR=${KCTL_KUBECONFIGS_DIR:-`$YQ_CMD r $KCTL_POD_FILE $KCTL_KEY.kubeconfigs_dir`}
-if_null $KCTL_KUBECONFIGS_DIR && KCTL_KUBECONFIGS_DIR=$DIR/configs
+if_null $KCTL_KUBECONFIGS_DIR && KCTL_KUBECONFIGS_DIR=$HOME/.kube
 KCTL_DEFAULT_NS=${KCTL_DEFAULT_NS:-`$YQ_CMD r $KCTL_POD_FILE $KCTL_KEY.default_ns`}
 if_null $KCTL_DEFAULT_NS && KCTL_DEFAULT_NS=default
 KCTL_DEFAULT_ING_NS=${KCTL_DEFAULT_ING_NS:-`$YQ_CMD r $KCTL_POD_FILE $KCTL_KEY.default_ing_ns`}
@@ -211,7 +211,7 @@ getNSandPod() {
 }
 
 crud() {
-  if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+  if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
   case "${2}"
   in
     ("ing")
@@ -247,7 +247,7 @@ crud() {
 }
 
 export KUBECONFIG=`cat $SDIR/cluster`
-
+CUR_CNTX=`kubectl config current-context`
 dopf() {
     portmap=$($YQ_CMD r $KCTL_POD_FILE $2.portmap)
     getNSandPod "$2"
@@ -279,7 +279,7 @@ in
       crud describe "${@:2}"
       ;;
     ("apply")
-      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
       if [ "$VERBOSE" = "1" ]; then
         echo RUNNING : kubectl apply -f ${2} "${@:3}"
       fi
@@ -289,7 +289,7 @@ in
       kubectl apply -f ${2} "${@:3}"
       ;;
     ("ex")
-      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
       getNSandPod "$2"
       set_container
       if [ "$VERBOSE" = "1" ]; then
@@ -327,7 +327,7 @@ in
       fi
       ;;
     ("ssh")
-      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
       getNSandPod "$2"
       set_container
       if [ "$VERBOSE" = "1" ]; then
@@ -336,7 +336,7 @@ in
       $SDIR/vendor/kubectl-ssh "${@:4}" -n ${NAME_SPACE} -u $3 ${CONTAINER_NAME} $ACT_ENTITY
       ;;
     ("log")
-      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
       getNSandPod "$2"
       cmds="${@:3}"
       if [[ "$cmds" != *"--tail="* ]]; then
@@ -352,12 +352,12 @@ in
       kubectl -n ${NAME_SPACE} logs $ACT_ENTITY --all-containers $cmds
       ;;
     ("pf")
-      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
       dopf $1 $2
       wait
       ;;
     ("cp"|"upcp")
-      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
       getNSandPod "$2"
       set_container
       from="${CONTAINER_NAME} ${NAME_SPACE}/$ACT_ENTITY:$3"
@@ -372,7 +372,7 @@ in
       kubectl cp "${@:5}" $from $to
       ;;
     ("ds")
-      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
       KCTL_ds_token=$($YQ_CMD r $KUBECONFIG ds.token)
       if if_null $KCTL_ds_token; then
         KCTL_ds_token=$(kubectl describe secret $(kubectl get secrets | grep kubernetes-dashboard- | head -1 | awk '{ print $1 }') | tail -1 | awk '{print $2}')
@@ -400,7 +400,7 @@ in
       fi
       ;;
     ("cf")
-      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
       if [ "$2" != "" ] && [ "$3" != "" ]; then
         if [ ! -f $KUBECONFIG ]; then
           echo "Creating new config file: $KUBECONFIG"
@@ -416,7 +416,7 @@ in
       fi
       ;;
     ("--")
-      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON `basename $KUBECONFIG`; fi
+      if [ "$VERBOSE" != "0" ]; then echo RUNNING ON $CUR_CNTX; fi
       case "${2}"
       in
         ("delete"|"apply"|"create")
@@ -429,15 +429,14 @@ in
       ;;
     ("ln")
       if [ "$2" = "" ]; then
-        echo CURRENTLY ON `basename $KUBECONFIG`
+        echo CURRENTLY ON `kubectl config current-context`
         exit 0
       fi
       if [ "$3" != "" ]; then
         cp $3 ${KCTL_KUBECONFIGS_DIR}/${2}
         echo "${KCTL_KUBECONFIGS_DIR}/${2}" > $SDIR/cluster
       fi
-      echo "${KCTL_KUBECONFIGS_DIR}/$2" > $SDIR/cluster
-      echo SWITCHED TO $2
+      kubectl config use-context $2
       ;;
     (*)
       getHelp

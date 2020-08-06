@@ -32,8 +32,10 @@ fi
 
 YQ_CMD='yq'
 if ! command -v $YQ_CMD > /dev/null 2>&1; then
-  curl -Lo vendor/yq https://github.com/mikefarah/yq/releases/download/3.3.2/yq_`uname | tr '[:upper:]' '[:lower:]'`_amd64
-  chmod +x vendor/yq
+  if [ ! -f "vendor/yq" ]; then
+    curl -Lo vendor/yq https://github.com/mikefarah/yq/releases/download/3.3.2/yq_`uname | tr '[:upper:]' '[:lower:]'`_amd64
+    chmod +x vendor/yq
+  fi
   YQ_CMD=vendor/yq
 fi
 
@@ -42,7 +44,7 @@ KCTL_POD_FILE=${KCTL_POD_FILE:-$1}
 [ -z $KCTL_POD_FILE ] && KCTL_POD_FILE=$DIR/pod.yaml
 [ ! -f $KCTL_POD_FILE ] && touch $KCTL_POD_FILE
 KCTL_KUBECONFIGS_DIR=${KCTL_KUBECONFIGS_DIR:-`$YQ_CMD r $KCTL_POD_FILE $KCTL_KEY.kubeconfigs_dir`}
-if_null $KCTL_KUBECONFIGS_DIR && KCTL_KUBECONFIGS_DIR=$DIR/configs
+if_null $KCTL_KUBECONFIGS_DIR && KCTL_KUBECONFIGS_DIR=$HOME/.kube
 
 if [ ! -f vendor/kubectl-ssh ]; then
   curl -o vendor/kubectl-ssh https://raw.githubusercontent.com/jordanwilson230/kubectl-plugins/master/kubectl-ssh
@@ -57,6 +59,7 @@ if [ ! -f /usr/local/bin/kctl ]; then
     DUMP_IN=$HOME/bin
   fi
   if [ -d $DUMP_IN ]; then
+    rm -f $DUMP_IN/kctl
     ln -s $DIR/kctl.sh $DUMP_IN/kctl
     if ! command -v kctl > /dev/null 2>&1; then
       echo "Make sure to have $DUMP_IN into your \$PATH."
@@ -68,7 +71,7 @@ fi
 
 mkdir -p ${KCTL_KUBECONFIGS_DIR}
 if [ ! -f $DIR/cluster ]; then
-  filep=${2:-dev}
+  filep=${2:-config}
   bn=${3:-`basename "$filep"`}
   if [ "$2" != "" ]; then
     cp $2 ${KCTL_KUBECONFIGS_DIR}/${bn}
