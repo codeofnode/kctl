@@ -32,7 +32,7 @@ fi
 
 YQ_CMD='yq'
 if ! command -v $YQ_CMD > /dev/null 2>&1; then
-  curl -Lo vendor/yq https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64
+  curl -Lo vendor/yq https://github.com/mikefarah/yq/releases/download/3.3.2/yq_`uname | tr '[:upper:]' '[:lower:]'`_amd64
   chmod +x vendor/yq
   YQ_CMD=vendor/yq
 fi
@@ -52,10 +52,14 @@ fi
 
 if [ ! -f /usr/local/bin/kctl ]; then
   chmod +x $DIR/kctl.sh
-  if [ -d $HOME/bin ]; then
-    ln -s $DIR/kctl.sh $HOME/bin/kctl
+  DUMP_IN=$HOME/.local/bin
+  if [ ! -d $DUMP_IN ]; then
+    DUMP_IN=$HOME/bin
+  fi
+  if [ -d $DUMP_IN ]; then
+    ln -s $DIR/kctl.sh $DUMP_IN/kctl
     if ! command -v kctl > /dev/null 2>&1; then
-      echo "Make sure to have $HOME/bin into your \$PATH."
+      echo "Make sure to have $DUMP_IN into your \$PATH."
     fi
   else
     echo sudo ln -s $DIR/kctl.sh /usr/local/bin/kctl
