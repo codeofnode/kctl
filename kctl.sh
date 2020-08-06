@@ -97,7 +97,7 @@ if ! command -v $BROWSER > /dev/null 2>&1; then
   if command -v xdg-open > /dev/null 2>&1; then
     BROWSER=xdg-open
   elif [ -d /Applications ]; then
-    BROWSER=open -a "Google Chrome"
+    BROWSER=open
   fi
 fi
 
