@@ -283,9 +283,9 @@ in
       if [ "$VERBOSE" = "1" ]; then
         echo RUNNING : kubectl apply -f ${2} "${@:3}"
       fi
-      if [ "$VERBOSE" != "0" ]; then
-        read -p "Continue? (yY/nN): " confirm && [[ $confirm = [yY] || $confirm = [yY][eE][sS] ]] || exit 1
-      fi
+      #if [ "$VERBOSE" != "0" ]; then
+      #  read -p "Continue? (yY/nN): " confirm && [[ $confirm = [yY] || $confirm = [yY][eE][sS] ]] || exit 1
+      #fi
       kubectl apply -f ${2} "${@:3}"
       ;;
     ("ex")
